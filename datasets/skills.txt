@@ -1,0 +1,5 @@
+python
+machine learning
+sql
+fastapi
+docker

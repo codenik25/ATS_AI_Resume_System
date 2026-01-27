@@ -1,10 +1,12 @@
-def generate_suggestions(missing_skills):
+def generate_suggestions(missing_skills, job_role):
     if not missing_skills:
-        return "🎉 Excellent! Your resume matches most of the required skills."
+        return f"🎉 Excellent! Your resume is highly optimized for the {job_role} role."
 
-    tips = "📌 To improve your ATS score, consider adding these skills:\n"
+    suggestions = f"🛠 To improve your ATS score for {job_role}, consider adding:\n\n"
+
     for skill in missing_skills:
-        tips += f"• {skill}\n"
+        suggestions += f"• {skill}\n"
 
-    tips += "\n💡 Try adding these skills in your projects, experience, or skills section."
-    return tips
+    suggestions += "\n📌 Tip: Add these skills in Projects, Experience, or Skills section."
+
+    return suggestions

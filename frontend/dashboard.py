@@ -6,7 +6,13 @@ import streamlit as st
 import pandas as pd
 
 from ml_engine.candidate_ranker import rank_candidates
-from ml_engine.database import init_db, insert_score, get_leaderboard, get_role_analytics
+from ml_engine.database import (
+    init_db,
+    insert_score,
+    get_leaderboard,
+    get_role_analytics,
+    get_top_resumes
+)
 from ml_engine.suggestions import generate_suggestions
 
 # Initialize database
@@ -17,7 +23,7 @@ st.set_page_config(page_title="AI Resume Scoring Platform", layout="wide")
 st.title("🤖 AI Resume Score Checker & Leaderboard")
 st.write("Upload your resume and evaluate your ATS score for different job roles.")
 
-# ------------------- USER INFO -------------------
+# ---------------- USER INFO ----------------
 st.subheader("👤 Candidate Info")
 
 name = st.text_input("Enter Your Name")
@@ -26,7 +32,7 @@ job_role = st.selectbox(
     ["Data Scientist", "Backend Developer", "ML Engineer"]
 )
 
-# ------------------- RESUME UPLOAD -------------------
+# ---------------- RESUME UPLOAD ----------------
 uploaded_files = st.file_uploader(
     "📤 Upload Resume PDFs",
     type=["pdf"],
@@ -41,7 +47,7 @@ if uploaded_files:
             f.write(file.getbuffer())
     st.success("Resumes uploaded successfully!")
 
-# ------------------- RUN ATS SCORING -------------------
+# ---------------- ATS SCORING ----------------
 if st.button("🔍 Run ATS Score Check") and uploaded_files:
 
     job_title, ranking_df = rank_candidates()
@@ -56,7 +62,7 @@ if st.button("🔍 Run ATS Score Check") and uploaded_files:
     csv = ranking_df.to_csv(index=False).encode('utf-8')
     st.download_button("📥 Download Ranking Report", csv, "candidate_ranking.csv", "text/csv")
 
-    # ------------------- USER RESULT -------------------
+    # -------- USER RESULT --------
     user_file = uploaded_files[0].name
     user_row = ranking_df[ranking_df["Candidate"] == user_file]
 
@@ -65,10 +71,9 @@ if st.button("🔍 Run ATS Score Check") and uploaded_files:
         semantic_score = float(user_row["Semantic Score"].values[0])
         final_score = float(user_row["Final Score"].values[0])
 
-        insert_score(name, job_role, skill_score, semantic_score, final_score)
+        insert_score(name, job_role, skill_score, semantic_score, final_score, user_file)
         st.success("✅ Your score saved to leaderboard!")
 
-        # Score breakdown
         st.subheader("📊 Your Score Breakdown")
         breakdown = pd.DataFrame({
             "Metric": ["Skill Match", "Semantic Match"],
@@ -82,7 +87,7 @@ if st.button("🔍 Run ATS Score Check") and uploaded_files:
             missing_skills = user_row["Missing Skills"].values[0]
             st.info(generate_suggestions(missing_skills, job_role))
 
-# ------------------- LEADERBOARD -------------------
+# ---------------- LEADERBOARD ----------------
 st.subheader("🏆 Leaderboard")
 
 rows = get_leaderboard(job_role)
@@ -93,7 +98,7 @@ if rows:
     if name and name in df["Name"].values[:10]:
         st.success("🎖 You are in Top 10 for this role!")
 
-# ------------------- ROLE ANALYTICS -------------------
+# ---------------- ROLE ANALYTICS ----------------
 st.subheader("📈 Role-wise Analytics")
 
 analytics_rows = get_role_analytics()
@@ -105,7 +110,7 @@ if analytics_rows:
     st.dataframe(analytics_df)
     st.bar_chart(analytics_df.set_index("Job Role")["Average Score"])
 
-# ------------------- RESUME COMPARISON -------------------
+# ---------------- RESUME COMPARISON ----------------
 st.subheader("🆚 Resume Comparison")
 
 if rows and len(rows) >= 2:
@@ -122,5 +127,23 @@ if rows and len(rows) >= 2:
             "Candidate": [candidate1, candidate2],
             "Score": [score1, score2]
         })
-
         st.bar_chart(compare_df.set_index("Candidate"))
+
+# ---------------- TOP 5 RESUME VIEWER ----------------
+st.subheader("🏆 Top 5 Resumes (Reference Learning)")
+
+top_rows = get_top_resumes(job_role)
+
+if top_rows:
+    for candidate_name, resume_file, score in top_rows:
+        st.write(f"**{candidate_name}** — Score: {score}")
+        file_path = f"datasets/resume_pdfs/{resume_file}"
+
+        if os.path.exists(file_path):
+            with open(file_path, "rb") as pdf_file:
+                st.download_button(
+                    label=f"Download {candidate_name}'s Resume",
+                    data=pdf_file,
+                    file_name=resume_file,
+                    mime="application/pdf"
+                )

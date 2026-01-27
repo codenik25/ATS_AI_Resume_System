@@ -1,0 +1,16 @@
+python
+java
+machine learning
+ml
+deep learning
+nlp
+natural language processing
+sql
+mysql
+postgresql
+flask
+fastapi
+django
+docker
+aws
+git
